@@ -1,0 +1,25 @@
+SSH_SOCK_LINK=$HOME/.ssh_auth_sock
+SSH_AGENT_INFO=$HOME/.ssh_agent_info
+
+# We search for the ssh-agent, if not running, we start it
+pid=`ps -ea | grep ssh-agent | grep -v grep | grep -v defunct`
+if [ "$pid" = "" ]
+then
+  echo "Did not find ssh-agent running, starting ssh-agent..."
+  eval `$SCSSH_PATH/ssh-agent`
+  echo "SSH_AUTH_SOCK=$SSH_SOCK_LINK; export SSH_AUTH_SOCK" > $SSH_AGENT_INFO
+
+  # The PID is mainly historical and maybe it is useful later on
+  echo "SSH_AGENT_PID=$SSH_AGENT_PID; export SSH_AGENT_PID" >> $SSH_AGENT_INFO
+
+  # Add default keys from $HOME/.ssh/
+  $SCSSH_PATH/ssh-add ~/.ssh/*.pem
+
+  # Point at the new socket
+  rm $SSH_SOCK_LINK
+  ln -s $SSH_AUTH_SOCK $SSH_SOCK_LINK
+  SSH_AUTH_SOCK=$SSH_SOCK_LINK; export SSH_AUTH_SOCK
+else
+  . $SSH_AGENT_INFO
+  echo "Setup environment for running SSH Agent [$SSH_AGENT_PID] from $SSH_AGENT_INFO"
+fi
